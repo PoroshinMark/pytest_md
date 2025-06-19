@@ -1,7 +1,7 @@
 [project]
 name = "pytest-md"
 version = "0.1.0"
-description = "Add your description here"
+description = "A pytest plugin for generating beautiful Markdown test reports with detailed test information, metadata, and execution statistics"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -11,6 +11,9 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["pytest_md"]
+
+[tool.setuptools.package-data]
+pytest_md = ["res/*"]
 
 [tool.pytest.ini_options]
 addopts = "--md=report.md"
