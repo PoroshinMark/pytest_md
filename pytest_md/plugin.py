@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import pytest
 from pytest_md.report import MarkDownReport
@@ -14,8 +15,29 @@ class MarkdownPlugin:
     def __init__(self, config):
         self.md_path = config.getoption("mdpath")
         if self.md_path:
-            resources_path = Path(__file__).parent.joinpath("res")
-            report_template = _read_template([resources_path], "report.template.jinja2")
+            # Try multiple paths to find the template
+            template_found = False
+            possible_paths = [
+                Path(__file__).parent.joinpath("res"),  # Development path
+                Path(__file__).parent / "res",  # Alternative path
+            ]
+            
+            for resources_path in possible_paths:
+                if resources_path.exists() and (resources_path / "report.template.jinja2").exists():
+                    try:
+                        report_template = _read_template([resources_path], "report.template.jinja2")
+                        template_found = True
+                        break
+                    except Exception as e:
+                        continue
+            
+            if not template_found:
+                raise FileNotFoundError(
+                    f"Template file 'report.template.jinja2' not found. "
+                    f"Searched in: {[str(p) for p in possible_paths]}. "
+                    f"Please ensure the package is properly installed with all resources."
+                )
+            
             report_data = ReportData(config)
             self.markdown_report = MarkDownReport(self.md_path, report_data, report_template)
         else:

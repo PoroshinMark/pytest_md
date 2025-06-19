@@ -14,17 +14,29 @@ A pytest plugin for generating beautiful Markdown test reports with detailed tes
 
 ## Installation
 
+### From PyPI (when available)
+
+```bash
+pip install pytest-md
+```
+
+### From Git
+
+```bash
+pip install git+https://github.com/PoroshinMark/pytest_md.git
+```
+
 ### From Source
 
 ```bash
-git clone <repository-url>
-cd pytest-md
+git clone https://github.com/PoroshinMark/pytest_md.git
+cd pytest_md
 pip install -e .
 ```
 
 ### Dependencies
 
-- Python 3.12+
+- Python 3.10+
 - pytest >= 8.4.1
 - jinja2 >= 3.1.6
 
@@ -63,6 +75,30 @@ def test_example(extras):
     extras.append("Additional information")
     assert True
 ```
+
+## Troubleshooting
+
+### Template Not Found Error
+
+If you encounter an error like:
+```
+jinja2.exceptions.TemplateNotFound: 'report.template.jinja2' not found
+```
+
+This usually means the package wasn't installed correctly. Try:
+
+1. Reinstalling the package:
+   ```bash
+   pip uninstall pytest-md
+   pip install git+https://github.com/PoroshinMark/pytest_md.git
+   ```
+
+2. Check if the template file exists in the installed package:
+   ```bash
+   python -c "import pytest_md; from pathlib import Path; print(Path(pytest_md.__file__).parent / 'res' / 'report.template.jinja2')"
+   ```
+
+3. If the issue persists, try installing from source instead of git.
 
 ## Example Output
 
@@ -159,6 +195,18 @@ pytest --md=report.md tests/test_specific.py
 This project is licensed under the Mozilla Public License 2.0.
 
 ## Changelog
+
+### 0.1.2
+- Fixed HTML escaping in Jinja2 templates to allow proper rendering of HTML tags
+- Disabled autoescape in template environment to support collapsible sections and other HTML content
+- HTML tags like `<details>` and `<summary>` now render correctly in generated reports
+
+### 0.1.1
+- Fixed template file inclusion in package distribution
+- Added fallback mechanisms for template loading
+- Improved error handling for missing resources
+- Added support for importlib.resources
+- Updated package configuration for better compatibility
 
 ### 0.1.0
 - Initial release
