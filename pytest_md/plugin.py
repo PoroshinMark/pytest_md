@@ -4,6 +4,7 @@ import os
 import pytest
 from pytest_md.report import MarkDownReport
 from pytest_md.fixtures import extras_stash_key
+from pytest_md.fixtures import metrics_stash_key
 from pytest_md.report_data import ReportData
 from pytest_md.utils import _read_template
 
@@ -14,6 +15,7 @@ pytest_plugins = ['pytest_md']
 class MarkdownPlugin:
     def __init__(self, config):
         self.md_path = config.getoption("mdpath")
+        self.project_name = config.getoption("project_name")
         if self.md_path:
             # Try multiple paths to find the template
             template_found = False
@@ -39,7 +41,7 @@ class MarkdownPlugin:
                 )
             
             report_data = ReportData(config)
-            self.markdown_report = MarkDownReport(self.md_path, report_data, report_template)
+            self.markdown_report = MarkDownReport(self.md_path, report_data, report_template, project_name=self.project_name)
         else:
             self.markdown_report = None
 
@@ -69,6 +71,14 @@ def pytest_addoption(parser):
         default=None,
         help="create md report file at given path.",
     )
+    group.addoption(
+        "--project_name",                             # new: CLI flag for project name
+        action="store",
+        dest="project_name",
+        metavar="project_name",
+        default=None,
+        help="project name that the test is associated with.",
+    )
 
 
 def pytest_configure(config):
@@ -90,5 +100,8 @@ def pytest_runtest_makereport(item, call):
     report = outcome.get_result()
     if report.when == "call":
         fixture_extras = item.config.stash.get(extras_stash_key, [])
+        fixture_metrics = item.config.stash.get(metrics_stash_key, [])
         plugin_extras = getattr(report, "extras", [])
+        plugin_metrics = getattr(report, "metrics", [])
         report.extras = fixture_extras + plugin_extras
+        report.metrics = fixture_metrics + plugin_metrics

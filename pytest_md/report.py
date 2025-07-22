@@ -1,5 +1,7 @@
 import os
 import math
+import mlflow
+from mlflow.tracking import MlflowClient
 import pytest
 from pathlib import Path
 from collections import defaultdict
@@ -11,13 +13,15 @@ from pytest_md.fixtures import extras, extras_stash_key
 
 class MarkDownReport:
 
-    def __init__(self, report_path, report_data, report_template):
+    def __init__(self, report_path, report_data, report_template, project_name=None):
         self._report_path = (
             Path.cwd() / Path(os.path.expandvars(report_path)).expanduser()
         )
         self._reports = defaultdict(dict)
         self._report = report_data
         self._report_template = report_template
+        self._mlflow_client = self._get_mlflow_client()
+        self.project_name = project_name
 
     @pytest.hookimpl(trylast=True)
     def pytest_runtest_logreport(self, report):
@@ -49,6 +53,7 @@ class MarkDownReport:
             for each in reports:
                 dur = test_duration if when == "call" else each.duration
                 self._process_report(each, dur)
+                self._log_node_to_mlflow(report.nodeid, each, dur)
     
     @pytest.hookimpl(trylast=True)
     def pytest_sessionstart(self, session):
@@ -60,6 +65,45 @@ class MarkDownReport:
         self._report.running_state = "finished"
         self._generate_report()
 
+
+    def _get_mlflow_client(self) -> MlflowClient | None:
+        """
+        Configure and verify access to the MLflow Tracking server.
+        Raises RuntimeError on any connectivity or authentication failure.
+        """
+        if os.getenv("MLFLOW_TRACKING_URI") is None or self.project_name is None:
+            return None
+        client = MlflowClient()
+        # quick check that credentials & server are working
+        try:
+            client.search_experiments(max_results=1)
+        except Exception as e:
+            return None
+        return client
+    
+    def _log_node_to_mlflow(self, nodeid, report, duration):
+        """
+        Log the test node to MLflow.
+        """
+        if not self._mlflow_client:
+            return
+        if report.when != "call":
+            return
+        experiment = self._mlflow_client.get_experiment_by_name(f"{self.project_name}-{nodeid}")
+        if not experiment:
+            experiment_id = self._mlflow_client.create_experiment(f"{self.project_name}-{nodeid}")
+        else:
+            experiment_id = experiment.experiment_id
+
+        metrics = self._process_metrics(report)
+        
+        with mlflow.start_run(experiment_id=experiment_id, run_name=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) as run:
+            mlflow.log_param("outcome", report.outcome)
+            mlflow.log_metric("duration", duration)
+            
+            for metric in metrics:
+                mlflow.log_metric(metric[0], metric[1])
+
     def _process_report(self, report, duration):
         if report.when != "call":
             return
@@ -67,6 +111,7 @@ class MarkDownReport:
         test_id = report.nodeid
         data = {
             "extras": self._process_extras(report, test_id),
+            "metrics": self._process_metrics(report),
         }
         processed_logs = _process_logs(report)
         self._report.add_test(data, report, outcome, processed_logs)
@@ -77,6 +122,11 @@ class MarkDownReport:
         test_index = hasattr(report, "rerun") and report.rerun + 1 or 0
         report_extras = getattr(report, "extras", [])
         return report_extras
+    
+    def _process_metrics(self, report):
+        test_index = hasattr(report, "rerun") and report.rerun + 1 or 0
+        report_metrics = getattr(report, "metrics", [])
+        return report_metrics
 
     def _process_outcome(self, report):
         if _is_error(report):
@@ -105,6 +155,23 @@ class MarkDownReport:
             total_duration=self._report.total_duration,
         )
         self._write_report(rendered_report)
+        self._log_final_report_to_mlflow()
+
+    def _log_final_report_to_mlflow(self):
+        """
+        Log the final report to MLflow.
+        """
+        if not self._mlflow_client:
+            return
+        experiment = self._mlflow_client.get_experiment_by_name(f"{self.project_name} Final Report")
+        if not experiment:
+            experiment_id = self._mlflow_client.create_experiment(f"{self.project_name} Final Report")
+        else:
+            experiment_id = experiment.experiment_id
+        
+        # Create a new run for the final report
+        with mlflow.start_run(experiment_id=experiment_id, run_name=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) as run:
+            mlflow.log_artifact(str(self._report_path), artifact_path="final_report")
 
     def _write_report(self, rendered_report):
         # Ensure the parent directory exists

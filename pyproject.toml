@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "jinja2>=3.1.6",
+    "mlflow>=3.1.1",
     "pytest>=8.4.1",
 ]
 
@@ -16,7 +17,7 @@ packages = ["pytest_md"]
 pytest_md = ["res/*"]
 
 [tool.pytest.ini_options]
-addopts = "--md=report.md"
+addopts = "--md=report.md --project_name=MyProject"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

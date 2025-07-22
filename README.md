@@ -11,6 +11,7 @@ A pytest plugin for generating beautiful Markdown test reports with detailed tes
 - 📋 **Detailed Logs**: Capture and display test logs and output
 - 🎨 **Beautiful Formatting**: Clean, readable Markdown output with emojis and structured sections
 - 🔧 **Easy Integration**: Simple command-line interface with minimal configuration
+- 📈 **MLFlow Integration**: Optionally log test results to MLFlow for tracking and analysis by defining your MLFlow environment variables `MLFLOW_TRACKING_URI`, `MLFLOW_TRACKING_USERNAME` and `MLFLOW_TRACKING_PASSWORD` and the fixture `metrics`
 
 ## Installation
 
@@ -50,13 +51,22 @@ Generate a Markdown report for your test suite:
 pytest --md=report.md tests/
 ```
 
+Generate a Markdown report for your test suite with MLFlow integration:
+
+```bash
+export MLFLOW_TRACKING_URI=http://localhost:5000
+export MLFLOW_TRACKING_USERNAME=your_username
+export MLFLOW_TRACKING_PASSWORD=your_password
+pytest --md=report.md --project_name=MyProject tests/
+```
+
 ### Configuration
 
 You can configure the plugin in your `pytest.ini` or `pyproject.toml`:
 
 ```ini
 [tool:pytest]
-addopts = --md=report.md
+addopts = --md=report.md --project_name=MyProject
 testpaths = tests
 python_files = test_*.py
 python_classes = Test*
@@ -73,6 +83,16 @@ import pytest
 def test_example(extras):
     extras.append("Custom metadata")
     extras.append("Additional information")
+    assert True
+```
+
+Use the `metrics` fixture to add MLFlow metrics to your tests:
+
+```python
+import pytest
+
+def test_example(metrics):
+    metrics.append(("metric_name", 0.95))
     assert True
 ```
 
@@ -153,6 +173,11 @@ No log output captured.
 </details>
 ```
 
+## 📈 MLFlow Integration
+For each test, an MLFlow experiment is created or reused based on the test identifier and the project name you provide. Additionally, a final report experiment is created with the name `"{project_name} Final Report"`.
+For each experiment, the metrics you define in your tests using the `metrics` fixture will be logged to MLFlow.
+For the final report, the generated Markdown report is logged as an artifact in the MLFlow experiment.
+
 ## Development
 
 ### Project Structure
@@ -195,6 +220,9 @@ pytest --md=report.md tests/test_specific.py
 This project is licensed under the Mozilla Public License 2.0.
 
 ## Changelog
+
+### 0.1.3
+- Added MLFlow integration for logging test results and metrics
 
 ### 0.1.2
 - Fixed HTML escaping in Jinja2 templates to allow proper rendering of HTML tags

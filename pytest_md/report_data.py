@@ -142,6 +142,7 @@ class ReportData:
             "duration": getattr(report, "duration", 0.0),
             "result": outcome,
             "extras": test_data.get("extras", []),
+            "metrics": test_data.get("metrics", []),
             "logs": logs,
         }
 
