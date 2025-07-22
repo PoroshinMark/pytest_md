@@ -89,13 +89,14 @@ class MarkDownReport:
             return
         if report.when != "call":
             return
+        metrics = self._process_metrics(report)
+        if not metrics:
+            return
         experiment = self._mlflow_client.get_experiment_by_name(f"{self.project_name}-{nodeid}")
         if not experiment:
             experiment_id = self._mlflow_client.create_experiment(f"{self.project_name}-{nodeid}")
         else:
             experiment_id = experiment.experiment_id
-
-        metrics = self._process_metrics(report)
         
         with mlflow.start_run(experiment_id=experiment_id, run_name=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) as run:
             mlflow.log_param("outcome", report.outcome)
