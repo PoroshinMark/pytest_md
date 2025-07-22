@@ -20,8 +20,8 @@ class MarkDownReport:
         self._reports = defaultdict(dict)
         self._report = report_data
         self._report_template = report_template
-        self._mlflow_client = self._get_mlflow_client()
         self.project_name = project_name
+        self._mlflow_client = self._get_mlflow_client()
 
     @pytest.hookimpl(trylast=True)
     def pytest_runtest_logreport(self, report):

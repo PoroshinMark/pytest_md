@@ -72,7 +72,7 @@ def pytest_addoption(parser):
         help="create md report file at given path.",
     )
     group.addoption(
-        "--project_name",                             # new: CLI flag for project name
+        "--project_name",
         action="store",
         dest="project_name",
         metavar="project_name",
